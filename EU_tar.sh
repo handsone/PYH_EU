@@ -100,11 +100,13 @@ mkdir_dir_get_remoteDir(){
     cd $script_path
     mkdir -p  $Local_path
     cd $Local_path
-
-    expect > /dev/null << EOF
+    
+    echo "(3) download remote lastest directory "
+    
+    expect   << EOF
     set timeout 1200
 
-    spawn sftp INT_FHGW@cdsftp.arraycomm.com
+    spawn sftp INT_FHGW@cdsftp.arraycomm.com 
     expect {
     "yes/no" { send "yes\r"; exp_continue}
     "password:" { send "BGygAgRdaztC\r" }
@@ -124,18 +126,24 @@ mkdir_dir_get_remoteDir(){
     expect eof
 
 EOF
-
 }
+
 find_down_lastet_dir(){
     cd $script_path
     remote_path=$1
     local_path=$2
+    
 
     #find latest name
     latest_Dir=$(find_latest_dir  $remote_path)
 
+    echo "(1) find remote latest dir: $latest_Dir"
+
     #concate prefix path 
     remote_latest_path=$remote_path/$latest_Dir
+
+    echo "(2) get remote latest dir path: $remote_latest_path"
+
 
     #download remote latest
     mkdir_dir_get_remoteDir $local_path $remote_latest_path
@@ -147,7 +155,7 @@ find_down_lastet_dir(){
 
 #Reorganized FPGA packages  and repaceage,remote server path $1, local coresponding path $2. 
 tar_fpga(){
-
+    echo "(4) repackage FPGA tar"
     remote_path=$1
     local_path=$2
 
@@ -174,7 +182,10 @@ tar_fpga(){
 }
 
 ohub_tar(){
-    
+   
+
+    echo "(5) repackage ohub tar"
+
     cd $script_path
     cd $local_path
 
@@ -192,6 +203,8 @@ ohub_tar(){
 }
 
 xml_create(){
+
+echo "(6) create xml file"
 echo -e  \
 "<xml>
   <manifest version=\"1.0\">
@@ -211,12 +224,15 @@ echo -e  \
 
 packing(){
 
+
     find_down_lastet_dir $1 $2
     tar_fpga $1 $2
     ohub_tar
     xml_create
+    echo "(7) zip compress AC-hub-6cg-${version}.zip"
     zip  AC-hub-6cg-${version}.zip  $ohub_tar_name fpga_${version}.tar.gz  manifest.xml
     rm -rf O_HUB O-HUB.netconf.tar.gz fpga_${version}.tar.gz manifest.xml lib  app bsp bit fpga_${version}
+    echo "(8) target package save to ${2}/AC-hub-6cg-${version}.zip"
 
 }
 
@@ -236,14 +252,13 @@ package_code_split(){
     bit2=${package_code:1:1}
     bit3=${package_code:2:1}
     bit4=${package_code:3:1}
-    [[ $bit1 -eq 1 ]] && { echo "==1"; packing $remote_first_A_path $local_first_A_path;} 
-    [[ $bit2 -eq 1 ]] && { echo "==1"; packing $remote_first_B_path $local_first_B_path;} 
-    [[ $bit3 -eq 1 ]] && { echo "==1"; packing $remote_cascade_A_path $local_cascade_A_path;} 
-    [[ $bit4 -eq 1 ]] && { echo "==1"; packing $remote_cascade_B_path $local_cascade_B_path;} 
+    [[ $bit1 -eq 1 ]] && { echo "First A enable"; packing $remote_first_A_path $local_first_A_path;} 
+    [[ $bit2 -eq 1 ]] && { echo "First B enable"; packing $remote_first_B_path $local_first_B_path;} 
+    [[ $bit3 -eq 1 ]] && { echo "Cascade A enable"; packing $remote_cascade_A_path $local_cascade_A_path;} 
+    [[ $bit4 -eq 1 ]] && { echo "Cascade B enable"; packing $remote_cascade_B_path $local_cascade_B_path;} 
 }
+
 package_code_split
-
-
 
 
 

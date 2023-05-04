@@ -44,10 +44,11 @@ usage(){
 
 func() {
     echo "Usage:"
-    echo "test.sh [-i O_HUB -c package_code ] "
+    echo "test.sh [-i O_HUB(AC-hub-6cg-0.68_test.zip) -c package_code ] "
+    echo "eg:./EU_tar.sh -i AC-hub-6cg-0.68_test.zip -c 0001"
     echo "Description:"
-    echo "O_HUB, o_hub zip package."
-    echo "package_code,four bit code,from left to right, they represent (First A, FirstB, Cascade A,Cascade B)"
+    echo "-i O_HUB, o_hub zip package."
+    echo "-c package_code,four bit code,from left to right, they represent (First A, FirstB, Cascade A,Cascade B)"
     echo "Use 0 or 1 to indicate if you want to package the version,eg, 1111, all four version are packaged"
     echo "0001, package Cascade B only "
     echo "0101, package Cascade B and First B "
@@ -65,8 +66,8 @@ while getopts 'i:c:h' OPT; do
     esac
 done
 
+[[ -z $S_DIR || -z $package_code ]] && {  echo "ERROR -i and -o are mandatory arguments. See usage(-h)"; exit 1; }
 
-#[[ $# -ne 1 ]] && { usage ;} || o_hub_package_file=$1 
 
 #o_hub_file_path=`realpath $1`
 o_hub_file_path=`realpath $S_DIR`
@@ -79,16 +80,51 @@ script_path=`pwd`
 [[ ${#package_code} -ne  4 ]] && { echo "please enter four digits code, eg: 1111" ; exit 1; }
 
 
-#exit
-
 #Accoring to the path of parameter 1($1), get the latest directory files on the server under that path.
 find_latest_dir() {
     path=$1
 
-    expect ./findlatestdir.tcl  $path   > info
+cat > tmp.tcl << 'EOF'
+#!/bin/expect
+set var1 [lindex $argv 0]
+
+set timeout 120
+spawn sftp INT_FHGW@cdsftp.arraycomm.com  
+expect {
+"yes/no" { send "yes\r"; exp_continue}
+"password:" { send "BGygAgRdaztC\r" }
+}
+
+
+expect { 
+"sftp>" 
+{
+    send "ls  -lt $var1 \r";
+}
+}
+
+expect {
+"sftp>"
+{
+send "exit \r"
+}
+}
+expect eof
+EOF
+
+
+    expect ./tmp.tcl  $path   > info
     latest_Dir=`cat info  | grep "2023" | awk 'NR==1{print $NF}' `
     echo $latest_Dir
 }
+
+#find_latest_dir() {
+    #path=$1
+
+    #expect ./findlatestdir.tcl  $path   > info
+    #latest_Dir=`cat info  | grep "2023" | awk 'NR==1{print $NF}' `
+    #echo $latest_Dir
+#}
 
 
 #Download the lastest folder($2) on the remote server to the corresponding local path($1).
@@ -137,7 +173,9 @@ find_down_lastet_dir(){
     #find latest name
     latest_Dir=$(find_latest_dir  $remote_path)
 
+
     echo "(1) find remote latest dir: $latest_Dir"
+
 
     #concate prefix path 
     remote_latest_path=$remote_path/$latest_Dir
@@ -149,8 +187,6 @@ find_down_lastet_dir(){
     mkdir_dir_get_remoteDir $local_path $remote_latest_path
 
 }
-
-
 
 
 #Reorganized FPGA packages  and repaceage,remote server path $1, local coresponding path $2. 
@@ -247,7 +283,7 @@ if [ $? -ne 0 ] ;then
     fi
 fi
 
-package_code_split(){
+package_code_recognition(){
     bit1=${package_code:0:1}
     bit2=${package_code:1:1}
     bit3=${package_code:2:1}
@@ -258,7 +294,5 @@ package_code_split(){
     [[ $bit4 -eq 1 ]] && { echo "Cascade B enable"; packing $remote_cascade_B_path $local_cascade_B_path;} 
 }
 
-package_code_split
-
-
+package_code_recognition
 

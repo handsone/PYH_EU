@@ -43,15 +43,14 @@ usage(){
 }
 
 func() {
-    echo "Usage:"
-    echo "test.sh [-i O_HUB(AC-hub-6cg-0.68_test.zip) -c package_code ] "
-    echo "eg:./EU_tar.sh -i AC-hub-6cg-0.68_test.zip -c 0001"
+    echo "Usage: EU_tar.sh -i O_HUB file  [-c package_code]"
+    echo "eg:./EU_tar.sh -i AC-hub-6cg-0.68_test.zip "
     echo "Description:"
     echo "-i O_HUB, o_hub zip package."
-    echo "-c package_code,four bit code,from left to right, they represent (First A, FirstB, Cascade A,Cascade B)"
+    echo "-c package_code, they represent (First A, FirstB, Cascade A,Cascade B)"
     echo "Use 0 or 1 to indicate if you want to package the version,eg, 1111, all four version are packaged"
-    echo "0001, package Cascade B only "
-    echo "0101, package Cascade B and First B "
+    echo "0001, package Cascade B only; 0101, package Cascade B and First B "
+    echo "if package_code is not specified, 1111 is used by default."
     
     exit -1
 }
@@ -66,7 +65,8 @@ while getopts 'i:c:h' OPT; do
     esac
 done
 
-[[ -z $S_DIR || -z $package_code ]] && {  echo "ERROR -i and -o are mandatory arguments. See usage(-h)"; exit 1; }
+[[ -z $S_DIR  ]] && {  echo "ERROR -i is mandatory arguments. See usage(-h)"; exit 1; }
+[[ -z $package_code ]] && { echo "package code is not specified , use 1111 "; package_code=1111 ; } 
 
 
 #o_hub_file_path=`realpath $1`
@@ -259,7 +259,6 @@ echo -e  \
 }
 
 packing(){
-
 
     find_down_lastet_dir $1 $2
     tar_fpga $1 $2
